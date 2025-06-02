@@ -1,0 +1,17 @@
+[
+  { "id": "s1", "expertise": "ML Basics", "experience": "4 years" },
+  { "id": "s2", "expertise": "Deep Learning Advance", "experience": "2 years" },
+  { "id": "s3", "expertise": "FrontEnd Medocare", "experience": "2 years" },
+  { "id": "s4", "expertise": "Frontend Middle", "experience": "7 years" },
+  { "id": "s5", "expertise": "UI/UX Specialist", "experience": "3 years" },
+  { "id": "s6", "expertise": "ML Basics", "experience": "4 years" },
+  { "id": "s7", "expertise": "Deep Learning Advance", "experience": "2 years" },
+  { "id": "s8", "expertise": "FrontEnd Medocare", "experience": "2 years" },
+  { "id": "s9", "expertise": "Frontend Middle", "experience": "7 years" },
+  { "id": "s10", "expertise": "UI/UX Specialist", "experience": "3 years" },
+  { "id": "s11", "expertise": "ML Basics", "experience": "4 years" },
+  { "id": "s12", "expertise": "Deep Learning Advance", "experience": "2 years" },
+  { "id": "s13", "expertise": "FrontEnd Medocare", "experience": "2 years" },
+  { "id": "s14", "expertise": "Frontend Middle", "experience": "7 years" },
+  { "id": "s15", "expertise": "UI/UX Specialist", "experience": "3 years" }
+]
