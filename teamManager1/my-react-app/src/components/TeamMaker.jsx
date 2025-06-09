@@ -1,322 +1,151 @@
 import { useState, useEffect } from "react";
 import FileHandler from "./FileHandler.jsx";
-import {
-  Container,
-  Typography,
-  FormGroup,
-  Box,
-  Grid,
-  Checkbox,
-  TextField,
-  Divider,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  Autocomplete,
-} from "@mui/material";
+import { Container, Typography, FormGroup, Box, Grid, Checkbox, TextField, Divider } from "@mui/material";
+import Autocomplete, { createFilterOptions } from "@mui/material/Autocomplete";
 import { grey } from "@mui/material/colors";
 
+const filter = createFilterOptions();
+
 const TeamMaker = ({ teams }) => {
-  const [isChecked, setIsChecked] = useState(false);
-  const [memberSkillSelections, setMemberSkillSelections] = useState({});
-  const [skillsList, setSkillsList] = useState([]);
-  const [uploadedDataContent, setUploadedDataContent] = useState(null);
   const [selectedTeams, setSelectedTeams] = useState([]);
-
-  const [openAddDialog, setOpenAddDialog] = useState(false);
-  const [newExpertise, setNewExpertise] = useState("");
-  const [newExperience, setNewExperience] = useState("");
-  const [pendingTeamMember, setPendingTeamMember] = useState({
-    teamId: "",
-    memberId: "",
-  });
-
-  const handleDataUpload = (uploaded) => {
-    setUploadedDataContent(uploaded);
-  };
+  const [memberSkills, setMemberSkills] = useState({});
+  const [allSkills, setAllSkills] = useState({});
+  const [uploadedData, setUploadedData] = useState(null);
 
   useEffect(() => {
-    const fetchSkills = async () => {
-      try {
-        const res = await fetch(
-          "https://raw.githubusercontent.com/ankmay0/teamManager1/main/my-react-app/public/SkillsData.json"
-        );
-        const result = await res.json();
-        setSkillsList(result);
-      } catch (error) {
-        console.error("Failed to fetch skills:", error);
-      }
-    };
-    fetchSkills();
+    fetch("https://raw.githubusercontent.com/ankmay0/teamManager1/main/my-react-app/public/SkillsData.json")
+      .then(res => res.json())
+      .then(data => {
+        const grouped = {};
+        data.forEach(skill => {
+          if (!grouped[skill.employeeId]) {
+            grouped[skill.employeeId] = [];
+          }
+          grouped[skill.employeeId].push(skill);
+        });
+        setAllSkills(grouped);
+      });
   }, []);
 
-  const handleSkillChange = (teamId, memberId, skillId) => {
-    setMemberSkillSelections((prev) => ({
-      ...prev,
-      [teamId]: {
-        ...(prev[teamId] || {}),
-        [memberId]: skillId,
-      },
-    }));
+  const toggleCheckbox = (id) => {
+    setSelectedTeams((prev) => {
+      if (prev.includes(id)) {
+        // Remove id if it's already selected
+        return prev.filter((x) => x !== id);
+      } else {
+        // Add id if not selected
+        return [...prev, id];
+      }
+    });
   };
 
-  function handleCheckboxChange(pairingIdentifier) {
-    console.log(selectedTeams);
-    if (isChecked) {
-      setSelectedTeams((prev) => prev.filter((id) => id !== pairingIdentifier));
-    } else {
-      setSelectedTeams((prev) => [...prev, pairingIdentifier]);
-    }
-    setIsChecked(!isChecked);
-  }
+
+  const addSkill = (memberId, expertise) => {
+    const newSkill = { id: Date.now(), employeeId: memberId, expertise, experience: "N/A" };
+    setAllSkills(prev => ({ ...prev, [memberId]: [...(prev[memberId] || []), newSkill] }));
+    return newSkill;
+  };
+
+  const updateSkill = (teamId, memberId, skill) =>
+    setMemberSkills(prev => ({ ...prev, [teamId]: { ...(prev[teamId] || {}), [memberId]: skill.id } }));
 
   return (
-    <Container
-      maxWidth="lg"
-      sx={{
-        mt: 4,
-        mb: 4,
-        border: "1px solid",
-        borderColor: grey[400],
-        borderRadius: 8,
-      }}
-    >
-      <Typography
-        variant="h3"
-        fontWeight="bold"
-        gutterBottom
-        sx={{ mt: 7, mb: 4, textAlign: "center" }}
-      >
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4, border: 1, borderColor: grey[400], borderRadius: 2 }}>
+      <Typography variant="h3" fontWeight="bold" gutterBottom sx={{ mt: 7, mb: 4, textAlign: "center" }}>
         Team Skill Assignment
       </Typography>
 
-      <Box sx={{ mb: 4 }}>
-        {teams?.length ? (
-          <FormGroup>
-            {teams.map((team, index) => {
-              const pairingIdentifier = `Pairing-${index}`;
-              const memberIds = [team.srcId, team.targetId];
-              const memberNames = [team.srcName, team.targetName];
-              const isChecked = selectedTeams.includes(pairingIdentifier);
+      {teams?.length ? (
+        <FormGroup>
+          {teams.map((team, i) => {
+            const pairingId = `Pairing-${i}`;
+            const ids = [team.srcId, team.targetId];
+            const names = [team.srcName, team.targetName];
+            const checked = selectedTeams.includes(pairingId);
 
-              return (
-                <Box key={pairingIdentifier} sx={{ py: 3 }}>
-                  <Grid container spacing={2} alignItems="center">
-                    <Checkbox
-                      checked={isChecked}
-                      onChange={() => handleCheckboxChange(pairingIdentifier)}
-                    />
-                    {memberIds.map((memberId, idx) => {
-                      const filteredSkills = skillsList.filter(
-                        (skill) => skill.employeeId === memberId
-                      );
-
-
-                      const selectedSkillId =
-                        memberSkillSelections[pairingIdentifier]?.[memberId];
-                      const selectedSkill =
-                        filteredSkills.find(
-                          (skill) => skill.id === selectedSkillId
-                        ) || null;
-
-
-                      return (
-                        <Grid item xs={12} sm={6} key={memberId}>
-                          <Box
-                            sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 1,
-                            }}
-                          >
-                            <Typography
-                              variant="h6"
-                              sx={{
-                                whiteSpace: "nowrap",
-                                minWidth: 100,
-                                fontWeight: "bold",
+            return (
+              <Box key={pairingId} sx={{ py: 3 }}>
+                <Grid container spacing={2} alignItems="center">
+                  <Checkbox checked={checked} onChange={() => toggleCheckbox(pairingId)} />
+                  {ids.map((id, idx) => (
+                    <Grid key={id}>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <Typography variant="h6" sx={{ minWidth: 100, fontWeight: "bold" }}>
+                          {names[idx]}
+                        </Typography>
+                        <Autocomplete
+                          disabled={!checked}
+                          value={(allSkills[id] || []).find(s => s.id === memberSkills[pairingId]?.[id]) || null}
+                          options={[
+                            { disabled: true, expertise: "Skill", experience: "Experience" },
+                            ...(allSkills[id] || [])
+                          ]}
+                          filterOptions={(opts, params) => {
+                            const filtered = filter(opts, params);
+                            if (params.inputValue && !opts.some(o => o.expertise?.toLowerCase() === params.inputValue.toLowerCase())) {
+                              filtered.push({ inputValue: params.inputValue, expertise: `Add "${params.inputValue}"` });
+                            }
+                            return filtered;
+                          }}
+                          getOptionLabel={option => option.inputValue || option.expertise || ""}
+                          onChange={(e, val) => {
+                            if (!val || val.disabled) return;
+                            const skill = typeof val === "string"
+                              ? addSkill(id, val)
+                              : val.inputValue
+                                ? addSkill(id, val.inputValue)
+                                : val;
+                            updateSkill(pairingId, id, skill);
+                          }}
+                          renderOption={(props, option) => (
+                            <li
+                              {...props}
+                              key={option.id || option.inputValue}
+                              style={{
+                                fontWeight: option.disabled ? "bold" : "normal",
+                                pointerEvents: option.disabled ? "none" : "auto",
+                                display: "flex",
+                                justifyContent: "space-between",
+                                paddingRight: 16,
+                                minWidth: 300,
                               }}
                             >
-                              {memberNames[idx]}
-                            </Typography>
-                            <Autocomplete
-                              disabled={!isChecked}
-                              options={filteredSkills}
-                              getOptionLabel={(option) => option.expertise}
-                              //isOptionEqualToValue={(option, value) => option.id === value.id}
-
-                              //value={selectedSkill}
-
-                              onChange={(event, newValue) => {
-                                if (!newValue) return;
-                                if (newValue === "add_new") {
-                                  setOpenAddDialog(true);
-                                  setPendingTeamMember({
-                                    teamId: pairingIdentifier,
-                                    memberId,
-                                  });
-                                } else {
-                                  handleSkillChange(
-                                    pairingIdentifier,
-                                    memberId,
-                                    newValue.id
-                                  );
-                                }
-                              }}
-                              renderInput={(params) => (
-                                <TextField
-                                  {...params}
-                                  label="Select Expertise"
-                                  variant="outlined"
-                                  sx={{ minWidth: 400 }}
-                                />
-                              )}
-                              renderOption={(props, option) => {
-                                if (option === "add_new") {
-                                  return (
-                                    <li
-                                      {...props}
-                                      style={{
-                                        fontWeight: "bold",
-                                        borderTop: "1px solid #ccc",
-                                        marginTop: 5,
-                                      }}
-                                    >
-                                      ➕ Add New Expertise
-                                    </li>
-                                  );
-                                }
-                                return (
-                                  <li {...props}>
-                                    <Box
-                                      sx={{ display: "flex", width: "100%" }}
-                                    >
-                                      <Box
-                                        sx={{
-                                          width: "50%",
-                                          fontWeight: "bold",
-                                        }}
-                                      >
-                                        {option.expertise}
-                                      </Box>
-                                      <Box
-                                        sx={{
-                                          width: "50%",
-                                          color: "text.secondary",
-                                        }}
-                                      >
-                                        {option.experience}
-                                      </Box>
-                                    </Box>
-                                  </li>
-                                );
-                              }}
-                              filterOptions={(options, state) => {
-                                const filtered = options.filter((option) =>
-                                  option.expertise
-                                    .toLowerCase()
-                                    .includes(state.inputValue.toLowerCase())
-                                );
-                                return [...filtered, "add_new"];
-                              }}
-                            />
-                          </Box>
-                        </Grid>
-                      );
-                    })}
-                  </Grid>
-                  <Divider
-                    sx={{
-                      mt: 4,
-                      borderColor: "rgb(178, 176, 239)",
-                      borderBottomWidth: 2,
-                    }}
-                  />
-                </Box>
-              );
-            })}
-          </FormGroup>
-        ) : (
-          <Typography sx={{ textAlign: "center", mt: 2 }}>
-            No team data available.
-          </Typography>
-        )}
-      </Box>
+                              <span style={{ flex: "1 1 60%" }}>{option.expertise}</span>
+                              <span style={{ flex: "1 1 40%", paddingLeft: 10 }}>{option.experience || ""}</span>
+                            </li>
+                          )}
+                          renderInput={params => <TextField {...params} label="Select or Add Expertise" sx={{ minWidth: 300 }} />}
+                        />
+                      </Box>
+                    </Grid>
+                  ))}
+                </Grid>
+                <Divider sx={{ mt: 4, borderColor: "rgb(178, 176, 239)", borderBottomWidth: 2 }} />
+              </Box>
+            );
+          })}
+        </FormGroup>
+      ) : (
+        <Typography sx={{ textAlign: "center", mt: 2 }}>No team data available.</Typography>
+      )}
 
       <FileHandler
-        selections={Object.fromEntries(
-          selectedTeams.map((key) => [key, memberSkillSelections[key]])
-        )}
-        data={uploadedDataContent}
-        onDataUpload={handleDataUpload}
+        selections={Object.fromEntries(selectedTeams.map(k => [k, memberSkills[k]]))}
+        data={{
+          ...uploadedData,
+          skills: Object.values(allSkills).flat(),
+          teams: teams.map(team => ({
+            name: `Pairing-${teams.indexOf(team)}`,
+            members: [
+              { id: team.srcId, name: team.srcName },
+              { id: team.targetId, name: team.targetName }
+            ]
+          }))
+        }}
+        onDataUpload={setUploadedData}
       />
 
-      <Dialog open={openAddDialog} onClose={() => setOpenAddDialog(false)}>
-        <DialogTitle>Add New Expertise</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Expertise"
-            fullWidth
-            value={newExpertise}
-            onChange={(e) => setNewExpertise(e.target.value)}
-          />
-          <TextField
-            margin="dense"
-            label="Experience"
-            fullWidth
-            value={newExperience}
-            onChange={(e) => setNewExperience(e.target.value)}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenAddDialog(false)}>Cancel</Button>
-          <Button
-            onClick={() => {
-              const newSkill = {
-                id: Date.now(),
-                employeeId: pendingTeamMember.memberId,
-                expertise: newExpertise,
-                experience: newExperience,
-              };
 
-              const alreadyExists = skillsList.some(
-                (skill) =>
-                  skill.employeeId === pendingTeamMember.memberId &&
-                  skill.expertise.trim().toLowerCase() ===
-                    newExpertise.trim().toLowerCase() &&
-                  skill.experience.trim().toLowerCase() ===
-                    newExperience.trim().toLowerCase()
-              );
-
-              if (alreadyExists) {
-                alert(
-                  "Skill with the same expertise and experience already exists for this member."
-                );
-                return;
-              }
-
-              setSkillsList((prev) => [...prev, newSkill]);
-              handleSkillChange(
-                pendingTeamMember.teamId,
-                pendingTeamMember.memberId,
-                newSkill.id
-              );
-
-              setOpenAddDialog(false);
-              setNewExpertise("");
-              setNewExperience("");
-              setPendingTeamMember({ teamId: "", memberId: "" });
-            }}
-            disabled={!newExpertise || !newExperience}
-          >
-            Add
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Container>
   );
 };
