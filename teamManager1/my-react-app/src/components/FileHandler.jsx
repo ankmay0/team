@@ -12,32 +12,33 @@ import UploadFileIcon from "@mui/icons-material/UploadFile";
 
 const FileHandler = ({ selections, data, onDataUpload }) => {
   const [fileName, setFileName] = useState("");
-  const [rawContent, setRawContent] = useState("");      // Original uploaded file
-  const [combinedContent, setCombinedContent] = useState(""); // File + selections
-  const [showContent, setShowContent] = useState(false);  // Show/hide toggle
+  const [rawContent, setRawContent] = useState("");
+  const [combinedContent, setCombinedContent] = useState("");
+  const [showContent, setShowContent] = useState(false);
 
-useEffect(() => {
-  if (!selections || typeof selections !== "object") return;
+  useEffect(() => {
+    if (!selections || typeof selections !== "object") return;
 
-  // If no data, create dummy base data object with empty skills list
-  const baseData = data && Object.keys(data).length ? data : { skills: [] };
+    const baseData = data && Object.keys(data).length ? data : { skills: [], teams: [] };
 
-  // Build selectedTeams from selections
-  const selectedTeams = Object.entries(selections).map(([teamName, members]) => ({
-    teamName,
-    members: Object.entries(members || {}).map(([memberId, skillId]) => {
-      const skill = baseData.skills?.find((s) => s.id === skillId);
-      return {
-        memberId,
-        selectedSkill: skill || skillId,
-      };
-    }),
-  }));
+    const selectedTeams = Object.entries(selections).map(([teamName, members]) => ({
+      teamName,
+      members: Object.entries(members || {}).map(([memberId, skillId]) => {
+        const skill = baseData.skills?.find((s) => s.id === skillId);
+        const member = baseData.teams
+          ?.find((t) => t.name === teamName)
+          ?.members?.find((m) => m.id === memberId);
 
-  const updated = { ...baseData, selectedTeams };
-  setCombinedContent(JSON.stringify(updated, null, 2));
-}, [selections, data]);
+        return {
+          memberName: member?.name || "Unknown Member",
+          expertise: skill?.expertise || skill?.name || "Unknown Skill",
+        };
+      }),
+    }));
 
+    const updated = { ...baseData, selectedTeams };
+    setCombinedContent(JSON.stringify(updated, null, 2));
+  }, [selections, data]);
 
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
@@ -93,7 +94,6 @@ useEffect(() => {
   return (
     <Box sx={{ bgcolor: "white", p: 6, borderRadius: 2, width: "100%" }}>
       <Grid container justifyContent="space-between" alignItems="center" spacing={2}>
-        {/* Left: Choose File */}
         <Grid item>
           <Button
             component="label"
@@ -112,7 +112,6 @@ useEffect(() => {
           </Button>
         </Grid>
 
-        {/* Center: Show/Hide Button */}
         <Grid item>
           <Button
             variant="contained"
@@ -123,7 +122,6 @@ useEffect(() => {
           </Button>
         </Grid>
 
-        {/* Right: Download */}
         <Grid item>
           <ButtonGroup variant="outlined">
             <Button
