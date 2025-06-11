@@ -10,35 +10,45 @@ import {
 } from "@mui/material";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 
-const FileHandler = ({ selections, data, onDataUpload }) => {
+const FileHandler = ({ selections, teams, data, onDataUpload }) => {
   const [fileName, setFileName] = useState("");
   const [rawContent, setRawContent] = useState("");
   const [combinedContent, setCombinedContent] = useState("");
   const [showContent, setShowContent] = useState(false);
 
   useEffect(() => {
-    if (!selections || typeof selections !== "object") return;
+    if (!selections || !teams) return;
 
-    const baseData = data && Object.keys(data).length ? data : { skills: [], teams: [] };
+    const skillConnections = [];
 
-    const selectedTeams = Object.entries(selections).map(([teamName, members]) => ({
-      teamName,
-      members: Object.entries(members || {}).map(([memberId, skillId]) => {
-        const skill = baseData.skills?.find((s) => s.id === skillId);
-        const member = baseData.teams
-          ?.find((t) => t.name === teamName)
-          ?.members?.find((m) => m.id === memberId);
+    teams.forEach((team, idx) => {
+      const pairingId = `Pairing-${idx}`;
+      const teamSelections = selections[pairingId];
+      if (!teamSelections) return;
 
-        return {
-          memberName: member?.name || "Unknown Member",
-          expertise: skill?.expertise || skill?.name || "Unknown Skill",
+      const srcSkill = teamSelections[team.srcId];
+      const targetSkill = teamSelections[team.targetId];
+      if (srcSkill && targetSkill) {
+        const existing = skillConnections.find(
+          (s) => s.name === targetSkill.expertise
+        );
+        const connection = {
+          name: srcSkill.expertise,
+          developer: team.srcName,
         };
-      }),
-    }));
+        if (existing) {
+          existing.connectedTo.push(connection);
+        } else {
+          skillConnections.push({
+            name: targetSkill.expertise,
+            connectedTo: [connection],
+          });
+        }
+      }
+    });
 
-    const updated = { ...baseData, selectedTeams };
-    setCombinedContent(JSON.stringify(updated, null, 2));
-  }, [selections, data]);
+    setCombinedContent(JSON.stringify({ skills: skillConnections }, null, 2));
+  }, [selections, teams]);
 
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
@@ -124,28 +134,14 @@ const FileHandler = ({ selections, data, onDataUpload }) => {
 
         <Grid item>
           <ButtonGroup variant="outlined">
-            <Button
-              sx={{ bgcolor: "green.600", '&:hover': { bgcolor: "green.700" } }}
-              onClick={() => handleDownload("json")}
-            >
-              Download JSON
-            </Button>
-            <Button
-              sx={{ bgcolor: "yellow.700", '&:hover': { bgcolor: "yellow.800" } }}
-              onClick={() => handleDownload("yml")}
-            >
-              Download YAML
-            </Button>
+            <Button onClick={() => handleDownload("json")}>Download JSON</Button>
+            <Button onClick={() => handleDownload("yml")}>Download YAML</Button>
           </ButtonGroup>
         </Grid>
       </Grid>
 
       {fileName && (
-        <Typography
-          variant="body2"
-          color="black"
-          sx={{ mt: 2, textAlign: "center" }}
-        >
+        <Typography variant="body2" color="black" sx={{ mt: 2, textAlign: "center" }}>
           Uploaded: {fileName}
         </Typography>
       )}
@@ -153,7 +149,7 @@ const FileHandler = ({ selections, data, onDataUpload }) => {
       {showContent && (
         <>
           {rawContent && <PreviewBlock title="Uploaded File Content" content={rawContent} />}
-          {combinedContent && <PreviewBlock title="Selected Teams" content={combinedContent} bg="#e8f5e9" />}
+          {combinedContent && <PreviewBlock title="Skill Connections" content={combinedContent} bg="#e8f5e9" />}
         </>
       )}
     </Box>
