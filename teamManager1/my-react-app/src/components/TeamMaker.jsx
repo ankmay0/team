@@ -35,14 +35,32 @@ const TeamMaker = ({ teams }) => {
           grouped[skill.employeeId].push(skill);
         });
         setAllSkills(grouped);
+        //{101: [{expertise: "frontend", experience: "2 years"} , {Expertise : "backend" , experience: "8yeras"}] , 102: [{expertise: "backend", experience: "3 years"} , {Expertise : "frontend" , experience: "5yeras"}] , 201: [{expertise: "backend", experience: "3 years"} , {Expertise : "frontend" , experience: "5yeras"}]..... }
+
       });
   }, []);
 
-  const toggleCheckbox = (id) => {
-    setSelectedTeams((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
-  };
+ const toggleCheckbox = (id) => {
+  
+  setSelectedTeams((prev) => {
+    if (prev.includes(id)) {
+      // Remove id from selectedTeams
+      // And also remove from memberSkills
+      setMemberSkills((prevSkills) => {
+        const updated = { ...prevSkills };
+        delete updated[id];
+        return updated;
+      });
+      return prev.filter((x) => x !== id);
+    } else {
+      // Add id to selectedTeams
+      return [...prev, id];
+    }
+    
+    //{pairing-0: {101: {expertise: "frontend", experience: "2 years"} , 102: {Expertise : "backend" , experience: "8yeras"} } , pairing-1: {201: {expertise: "backend", experience: "3 years"} , 202: {Expertise : "frontend" , experience: "5yeras"} } }
+  });
+};
+
 
   const addSkill = (memberId, expertise) => {
     const newSkill = {
@@ -62,6 +80,7 @@ const TeamMaker = ({ teams }) => {
     setMemberSkills((prev) => ({
       ...prev,
       [teamId]: { ...(prev[teamId] || {}), [memberId]: skill },
+      //pairing-0 : {  mayank : frontend}
     }));
   };
 
@@ -82,7 +101,7 @@ const TeamMaker = ({ teams }) => {
       {teams?.length ? (
         <FormGroup>
           {teams.map((team, i) => {
-            const pairingId = `Pairing-${i}`;
+            const pairingId = Pairing-${i};
             const ids = [team.srcId, team.targetId];
             const names = [team.srcName, team.targetName];
             const checked = selectedTeams.includes(pairingId);
@@ -107,6 +126,7 @@ const TeamMaker = ({ teams }) => {
                           disabled={!checked}
                           value={
                             memberSkills?.[pairingId]?.[id] || null
+                            //memberSkills = {Pairing-0:{ {expertise: "frontend", experience: "2 years"} , {Expertise : "backend" , experience: "8yeras"} } , Pairing-1: {{expertise: "backend", experience: "3 years"} , {Expertise : "frontend" , experience: "5yeras"} }}
                           }
                           options={[
                             {
@@ -128,7 +148,7 @@ const TeamMaker = ({ teams }) => {
                             ) {
                               filtered.push({
                                 inputValue: params.inputValue,
-                                expertise: `Add "${params.inputValue}"`,
+                                expertise: Add "${params.inputValue}",
                               });
                             }
                             return filtered;
@@ -141,9 +161,9 @@ const TeamMaker = ({ teams }) => {
                             const skill =
                               typeof val === "string"
                                 ? addSkill(id, val)
-                                : val.inputValue
+                                : (val.inputValue
                                 ? addSkill(id, val.inputValue)
-                                : val;
+                                : val);
                             updateSkill(pairingId, id, skill);
                           }}
                           renderOption={(props, option) => (
@@ -198,7 +218,7 @@ const TeamMaker = ({ teams }) => {
 
       <FileHandler
         selections={memberSkills}
-        teams={teams}
+        //{pairing-0: {101: {expertise: "frontend", experience: "2 years"} , 102: {Expertise : "backend" , experience: "8yeras"} } , pairing-1: {201: {expertise: "backend", experience: "3 years"} , 202: {Expertise : "frontend" , experience: "5yeras"} } }
         data={{
           ...uploadedData,
           skills: Object.values(allSkills).flat(),
