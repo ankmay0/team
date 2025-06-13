@@ -10,45 +10,72 @@ import {
 } from "@mui/material";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 
-const FileHandler = ({ selections, teams, data, onDataUpload }) => {
+const FileHandler = ({ selections, onDataUpload, uploadedData, developerNames = {} }) => {
   const [fileName, setFileName] = useState("");
   const [rawContent, setRawContent] = useState("");
   const [combinedContent, setCombinedContent] = useState("");
   const [showContent, setShowContent] = useState(false);
 
-  useEffect(() => {
-    if (!selections || !teams) return;
+useEffect(() => {
+  const existingMap = {};
 
-    const skillConnections = [];
-
-    teams.forEach((team, idx) => {
-      const pairingId = `Pairing-${idx}`;
-      const teamSelections = selections[pairingId];
-      if (!teamSelections) return;
-
-      const srcSkill = teamSelections[team.srcId];
-      const targetSkill = teamSelections[team.targetId];
-      if (srcSkill && targetSkill) {
-        const existing = skillConnections.find(
-          (s) => s.name === targetSkill.expertise
-        );
-        const connection = {
-          name: srcSkill.expertise,
-          developer: team.srcName,
-        };
-        if (existing) {
-          existing.connectedTo.push(connection);
-        } else {
-          skillConnections.push({
-            name: targetSkill.expertise,
-            connectedTo: [connection],
-          });
-        }
-      }
+  // Load existing uploadedData skills into map
+  if (uploadedData && Array.isArray(uploadedData.skills)) {
+    uploadedData.skills.forEach((item) => {
+      existingMap[item.name] = {
+        name: item.name,
+        connectedTo: [...item.connectedTo],
+      };
     });
+  }
 
-    setCombinedContent(JSON.stringify({ skills: skillConnections }, null, 2));
-  }, [selections, teams]);
+  // Process selections to build connections
+  Object.entries(selections || {}).forEach(([pairingId, pairingData]) => {
+    if (!pairingData || !pairingData.checked || !pairingData.skills) return;
+
+    const devSelections = pairingData.skills;
+    const devIds = Object.keys(devSelections);
+    if (devIds.length !== 2) return;  // Only process exact pairs
+
+    // Second developer (target)
+    const secondDevId = devIds[1];
+    const secondSkill = devSelections[secondDevId];
+    if (!secondSkill) return;
+
+    // Ensure skill node exists for secondSkill.expertise
+    if (!existingMap[secondSkill.expertise]) {
+      existingMap[secondSkill.expertise] = {
+        name: secondSkill.expertise,
+        connectedTo: [],
+      };
+    }
+
+    // First developer (source)
+    const firstDevId = devIds[0];
+    const firstSkill = devSelections[firstDevId];
+    if (!firstSkill) return;
+
+    const connection = {
+      name: firstSkill.expertise,
+      developer: developerNames[firstDevId] || firstDevId,
+    };
+
+    // Check for duplicate before adding
+    const exists = existingMap[secondSkill.expertise].connectedTo.find(
+      (c) => c.name === connection.name && c.developer === connection.developer
+    );
+
+    if (!exists) {
+      existingMap[secondSkill.expertise].connectedTo.push(connection);
+    }
+  });
+
+  // Final object
+  const mergedConnections = Object.values(existingMap);
+  setCombinedContent(JSON.stringify({ skills: mergedConnections }, null, 2));
+
+}, [selections, developerNames, uploadedData]);
+
 
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
@@ -63,7 +90,7 @@ const FileHandler = ({ selections, teams, data, onDataUpload }) => {
         const extension = file.name.split(".").pop().toLowerCase();
         const parsed = extension === "json" ? JSON.parse(content) : yaml.load(content);
 
-        onDataUpload(parsed);
+        onDataUpload && onDataUpload(parsed);
         setRawContent(JSON.stringify(parsed, null, 2));
       } catch (err) {
         console.error(err);
@@ -87,7 +114,7 @@ const FileHandler = ({ selections, teams, data, onDataUpload }) => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `updated-data.${format}`;
+    link.download = updated-data.${format};
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -126,7 +153,7 @@ const FileHandler = ({ selections, teams, data, onDataUpload }) => {
           <Button
             variant="contained"
             color={showContent ? "warning" : "success"}
-            onClick={() => setShowContent(prev => !prev)}
+            onClick={() => setShowContent((prev) => !prev)}
           >
             {showContent ? "Hide Content" : "Show Content"}
           </Button>
@@ -149,7 +176,13 @@ const FileHandler = ({ selections, teams, data, onDataUpload }) => {
       {showContent && (
         <>
           {rawContent && <PreviewBlock title="Uploaded File Content" content={rawContent} />}
-          {combinedContent && <PreviewBlock title="Skill Connections" content={combinedContent} bg="#e8f5e9" />}
+          {combinedContent && (
+            <PreviewBlock
+              title="Skill Connections"
+              content={combinedContent}
+              bg="#e8f5e9"
+            />
+          )}
         </>
       )}
     </Box>
