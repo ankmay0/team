@@ -16,14 +16,15 @@ import { grey } from "@mui/material/colors";
 const filter = createFilterOptions();
 
 const TeamMaker = ({ teams }) => {
-  //memberSkills will hold the selected skills for each team order (checkbox : true / false , 101 :<selected skill 1> ,102:<selected skill2>)
+  //memberSkills will hold the selected skills for each team order teamid: (checkbox : true / false , 101 :<selected skill 1> ,102:<selected skill2>)
   const [memberSkills, setMemberSkills] = useState({});
-  // allSkills will hold all the skills for each team member with key as memberId
+   // allSkills will hold all the skills for each team member with key as memberId
   const [allSkills, setAllSkills] = useState({});
-  const [uploadedData, setUploadedData] = useState(null);
 
   useEffect(() => {
-    fetch("https://raw.githubusercontent.com/ankmay0/teamManager1/main/my-react-app/public/SkillsData.json")
+    fetch(
+      "https://raw.githubusercontent.com/ankmay0/teamManager1/main/my-react-app/public/SkillsData.json"
+    )
       .then((res) => res.json())
       .then((data) => {
         const grouped = {};
@@ -76,16 +77,28 @@ const TeamMaker = ({ teams }) => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4, border: 1, borderColor: grey[400], borderRadius: 2 }}>
-      <Typography variant="h3" fontWeight="bold" gutterBottom sx={{ mt: 7, mb: 4, textAlign: "center" }}>
+    <Container
+      maxWidth="lg"
+      sx={{
+        mt: 4,
+        mb: 4,
+        border: 1,
+        borderColor: grey[400],
+        borderRadius: 2,
+      }}
+    >
+      <Typography
+        variant="h3"
+        fontWeight="bold"
+        gutterBottom
+        sx={{ mt: 7, mb: 4, textAlign: "center" }}
+      >
         Team Skill Assignment
       </Typography>
 
       {teams?.length ? (
         <FormGroup>
           {teams.map((team) => {
-            
-
             const members = [
               { id: team.srcId, name: team.srcName },
               { id: team.targetId, name: team.targetName },
@@ -101,14 +114,22 @@ const TeamMaker = ({ teams }) => {
 
                   {members.map((member) => (
                     <Grid item key={member.id}>
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                        <Typography variant="h6" sx={{ minWidth: 100, fontWeight: "bold" }}>
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
+                        <Typography
+                          variant="h6"
+                          sx={{ minWidth: 100, fontWeight: "bold" }}
+                        >
                           {member.name}
                         </Typography>
 
                         <Autocomplete
                           disabled={!memberSkills?.[team.teamId]?.checked}
-                          value={memberSkills?.[team.teamId]?.skills?.[member.id] || null}
+                          value={
+                            memberSkills?.[team.teamId]?.skills?.[member.id] ||
+                            null
+                          }
                           options={[
                             {
                               disabled: true,
@@ -123,7 +144,8 @@ const TeamMaker = ({ teams }) => {
                               params.inputValue &&
                               !opts.some(
                                 (o) =>
-                                  o.expertise?.toLowerCase() === params.inputValue.toLowerCase()
+                                  o.expertise?.toLowerCase() ===
+                                  params.inputValue.toLowerCase()
                               )
                             ) {
                               filtered.push({
@@ -133,7 +155,9 @@ const TeamMaker = ({ teams }) => {
                             }
                             return filtered;
                           }}
-                          getOptionLabel={(option) => option.inputValue || option.expertise || ""}
+                          getOptionLabel={(option) =>
+                            option.inputValue || option.expertise || ""
+                          }
                           onChange={(e, val) => {
                             if (!val || val.disabled) return;
                             const skill =
@@ -150,7 +174,9 @@ const TeamMaker = ({ teams }) => {
                               key={option.id || option.inputValue}
                               style={{
                                 fontWeight: option.disabled ? "bold" : "normal",
-                                pointerEvents: option.disabled ? "none" : "auto",
+                                pointerEvents: option.disabled
+                                  ? "none"
+                                  : "auto",
                                 display: "flex",
                                 justifyContent: "space-between",
                                 paddingRight: 16,
@@ -162,32 +188,35 @@ const TeamMaker = ({ teams }) => {
                             </li>
                           )}
                           renderInput={(params) => (
-                            <TextField {...params} label="Select or Add Expertise" sx={{ minWidth: 300 }} />
+                            <TextField
+                              {...params}
+                              label="Select or Add Expertise"
+                              sx={{ minWidth: 300 }}
+                            />
                           )}
                         />
                       </Box>
                     </Grid>
                   ))}
                 </Grid>
-                <Divider sx={{ mt: 4, borderColor: "rgb(178, 176, 239)", borderBottomWidth: 2 }} />
+                <Divider
+                  sx={{
+                    mt: 4,
+                    borderColor: "rgb(178, 176, 239)",
+                    borderBottomWidth: 2,
+                  }}
+                />
               </Box>
             );
           })}
         </FormGroup>
       ) : (
-        <Typography sx={{ textAlign: "center", mt: 2 }}>No team data available.</Typography>
+        <Typography sx={{ textAlign: "center", mt: 2 }}>
+          No team data available.
+        </Typography>
       )}
 
-      <FileHandler
-        selections={memberSkills}
-        developerNames={teams.reduce((acc, team) => {
-          acc[team.srcId] = team.srcName;
-          acc[team.targetId] = team.targetName;
-          return acc;
-        }, {})}
-        onDataUpload={setUploadedData}
-        uploadedData={uploadedData}
-      />
+      <FileHandler selections={memberSkills} />
     </Container>
   );
 };
