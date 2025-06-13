@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import * as yaml from "js-yaml";
 import {
   Box,
@@ -10,72 +10,78 @@ import {
 } from "@mui/material";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 
-const FileHandler = ({ selections, onDataUpload, uploadedData, developerNames = {} }) => {
+//selections will hold the selected skills for each team order {<teamid>: {checkbox : true / false , 101 :<selected skill 1> ,102:<selected skill2>} , <teamid2>: {...}}
+const FileHandler = ({ selections }) => {
+
   const [fileName, setFileName] = useState("");
   const [rawContent, setRawContent] = useState("");
   const [combinedContent, setCombinedContent] = useState("");
   const [showContent, setShowContent] = useState(false);
+  const [uploadedData, setUploadedData] = useState(null);
 
-useEffect(() => {
-  const existingMap = {};
+  const generateConnections = () => {
+    const existingMap = {};
 
-  // Load existing uploadedData skills into map
-  if (uploadedData && Array.isArray(uploadedData.skills)) {
-    uploadedData.skills.forEach((item) => {
-      existingMap[item.name] = {
-        name: item.name,
-        connectedTo: [...item.connectedTo],
+    if (uploadedData && Array.isArray(uploadedData.skills)) {
+      uploadedData.skills.forEach((item) => {
+        existingMap[item.name] = {
+          name: item.name,
+          connectedTo: [...item.connectedTo],
+        };
+      });
+    }
+
+    
+    Object.entries(selections || {}).forEach(([pairingId, pairingData]) => {
+      if (!pairingData || !pairingData.checked || !pairingData.skills) return;
+
+      //pairing id == teamId
+      //pairingData == {checked: true,  <developerId1>:  "skillName" , <developerId2>: "skillName"}
+      // remove expertise can be directly connected to developerId(to be done later) 
+      const devSelections = pairingData.skills;
+      const devIds = Object.keys(devSelections);
+      if (devIds.length !== 2) {
+        console.log("Bad Data:", devIds, devSelections);
+        return;
+      }
+
+      const [firstDevId, secondDevId] = devIds;
+      const firstSkill = devSelections[firstDevId];
+      const secondSkill = devSelections[secondDevId];
+      if (!firstSkill || !secondSkill) return;
+
+      if (!existingMap[secondSkill.expertise]) {
+        existingMap[secondSkill.expertise] = {
+          name: secondSkill.expertise,
+          connectedTo: [],
+        };
+      }
+
+      const connection = {
+        name: firstSkill.expertise,
+        developerId: firstDevId,
       };
+
+      const exists = existingMap[secondSkill.expertise].connectedTo.find(
+        (c) =>
+          c.name === connection.name && c.developerId === connection.developerId
+      );
+
+      if (!exists) {
+        existingMap[secondSkill.expertise].connectedTo.push(connection);
+      }
     });
-  }
 
-  // Process selections to build connections
-  Object.entries(selections || {}).forEach(([pairingId, pairingData]) => {
-    if (!pairingData || !pairingData.checked || !pairingData.skills) return;
+    const mergedConnections = Object.values(existingMap);
+    setCombinedContent(JSON.stringify({ skills: mergedConnections }, null, 2));
+  };
 
-    const devSelections = pairingData.skills;
-    const devIds = Object.keys(devSelections);
-    if (devIds.length !== 2) return;  // Only process exact pairs
-
-    // Second developer (target)
-    const secondDevId = devIds[1];
-    const secondSkill = devSelections[secondDevId];
-    if (!secondSkill) return;
-
-    // Ensure skill node exists for secondSkill.expertise
-    if (!existingMap[secondSkill.expertise]) {
-      existingMap[secondSkill.expertise] = {
-        name: secondSkill.expertise,
-        connectedTo: [],
-      };
+  const handleShowContent = () => {
+    if (!showContent) {
+      generateConnections();
     }
-
-    // First developer (source)
-    const firstDevId = devIds[0];
-    const firstSkill = devSelections[firstDevId];
-    if (!firstSkill) return;
-
-    const connection = {
-      name: firstSkill.expertise,
-      developer: developerNames[firstDevId] || firstDevId,
-    };
-
-    // Check for duplicate before adding
-    const exists = existingMap[secondSkill.expertise].connectedTo.find(
-      (c) => c.name === connection.name && c.developer === connection.developer
-    );
-
-    if (!exists) {
-      existingMap[secondSkill.expertise].connectedTo.push(connection);
-    }
-  });
-
-  // Final object
-  const mergedConnections = Object.values(existingMap);
-  setCombinedContent(JSON.stringify({ skills: mergedConnections }, null, 2));
-
-}, [selections, developerNames, uploadedData]);
-
+    setShowContent((prev) => !prev);
+  };
 
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
@@ -88,9 +94,10 @@ useEffect(() => {
       try {
         const content = event.target.result;
         const extension = file.name.split(".").pop().toLowerCase();
-        const parsed = extension === "json" ? JSON.parse(content) : yaml.load(content);
+        const parsed =
+          extension === "json" ? JSON.parse(content) : yaml.load(content);
 
-        onDataUpload && onDataUpload(parsed);
+        setUploadedData(parsed);
         setRawContent(JSON.stringify(parsed, null, 2));
       } catch (err) {
         console.error(err);
@@ -121,8 +128,12 @@ useEffect(() => {
 
   const PreviewBlock = ({ title, content, bg = "#f5f5f5" }) => (
     <Box sx={{ mt: 4 }}>
-      <Typography variant="h6" color="black">{title}</Typography>
-      <Paper sx={{ mt: 1, p: 2, bgcolor: bg, overflow: "auto", maxHeight: 300 }}>
+      <Typography variant="h6" color="black">
+        {title}
+      </Typography>
+      <Paper
+        sx={{ mt: 1, p: 2, bgcolor: bg, overflow: "auto", maxHeight: 300 }}
+      >
         <pre style={{ margin: 0, fontSize: 12 }}>{content}</pre>
       </Paper>
     </Box>
@@ -153,7 +164,7 @@ useEffect(() => {
           <Button
             variant="contained"
             color={showContent ? "warning" : "success"}
-            onClick={() => setShowContent((prev) => !prev)}
+            onClick={handleShowContent}
           >
             {showContent ? "Hide Content" : "Show Content"}
           </Button>
@@ -168,14 +179,20 @@ useEffect(() => {
       </Grid>
 
       {fileName && (
-        <Typography variant="body2" color="black" sx={{ mt: 2, textAlign: "center" }}>
+        <Typography
+          variant="body2"
+          color="black"
+          sx={{ mt: 2, textAlign: "center" }}
+        >
           Uploaded: {fileName}
         </Typography>
       )}
 
       {showContent && (
         <>
-          {rawContent && <PreviewBlock title="Uploaded File Content" content={rawContent} />}
+          {rawContent && (
+            <PreviewBlock title="Uploaded File Content" content={rawContent} />
+          )}
           {combinedContent && (
             <PreviewBlock
               title="Skill Connections"
