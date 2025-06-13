@@ -1,170 +1,195 @@
-import React, { useState, useEffect } from "react";
-import * as yaml from "js-yaml";
+import { useState, useEffect } from "react";
+import FileHandler from "./FileHandler.jsx";
 import {
-  Box,
-  Button,
+  Container,
   Typography,
+  FormGroup,
+  Box,
   Grid,
-  ButtonGroup,
-  Paper,
+  Checkbox,
+  TextField,
+  Divider,
 } from "@mui/material";
-import UploadFileIcon from "@mui/icons-material/UploadFile";
+import Autocomplete, { createFilterOptions } from "@mui/material/Autocomplete";
+import { grey } from "@mui/material/colors";
 
-const FileHandler = ({ selections, onDataUpload }) => {
-  const [fileName, setFileName] = useState("");
-  const [rawContent, setRawContent] = useState("");
-  const [combinedContent, setCombinedContent] = useState("");
-  const [showContent, setShowContent] = useState(false);
+const filter = createFilterOptions();
+
+const TeamMaker = ({ teams }) => {
+  //memberSkills will hold the selected skills for each team order (checkbox : true / false , 101 :<selected skill 1> ,102:<selected skill2>)
+  const [memberSkills, setMemberSkills] = useState({});
+  // allSkills will hold all the skills for each team member with key as memberId
+  const [allSkills, setAllSkills] = useState({});
+  const [uploadedData, setUploadedData] = useState(null);
 
   useEffect(() => {
-    if (!selections) return;
-    //{pairing-0: {101: {expertise: "frontend", experience: "2 years"} , 102: {Expertise : "backend" , experience: "8yeras"} } , pairing-1: {201: {expertise: "backend", experience: "3 years"} , 202: {Expertise : "frontend" , experience: "5yeras"} } }
+    fetch("https://raw.githubusercontent.com/ankmay0/teamManager1/main/my-react-app/public/SkillsData.json")
+      .then((res) => res.json())
+      .then((data) => {
+        const grouped = {};
+        data.forEach((skill) => {
+          if (!grouped[skill.employeeId]) grouped[skill.employeeId] = [];
+          grouped[skill.employeeId].push(skill);
+        });
+        setAllSkills(grouped);
+      });
+  }, []);
 
-
-    const skillConnections = [];
-
-    Object.entries(selections).forEach(([pairingId, devSelections]) => {
-      const devIds = Object.keys(devSelections);
-      if (devIds.length < 2) return; // Need at least 2 selections in a pair
-
-      const [devA, devB] = devIds;
-      const skillA = devSelections[devA];
-      const skillB = devSelections[devB];
-
-      if (skillA && skillB) {
-        const existing = skillConnections.find(
-          (s) => s.name === skillB.expertise
-        );
-
-        const connection = {
-          name: skillA.expertise,
-          developer: devA,
-        };
-
-        if (existing) {
-          existing.connectedTo.push(connection);
-        } else {
-          skillConnections.push({
-            name: skillB.expertise,
-            connectedTo: [connection],
-          });
-        }
-      }
+  const toggleCheckbox = (teamId) => {
+    setMemberSkills((prev) => {
+      const existing = prev[teamId] || { checked: false, skills: {} };
+      return {
+        ...prev,
+        [teamId]: { ...existing, checked: !existing.checked },
+      };
     });
+  };
 
-    setCombinedContent(JSON.stringify({ skills: skillConnections }, null, 2));
-  }, [selections]);
-
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    setFileName(file.name);
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const content = event.target.result;
-        const extension = file.name.split(".").pop().toLowerCase();
-        const parsed = extension === "json" ? JSON.parse(content) : yaml.load(content);
-
-        onDataUpload && onDataUpload(parsed);
-        setRawContent(JSON.stringify(parsed, null, 2));
-      } catch (err) {
-        console.error(err);
-        alert("Invalid file format.");
-      }
+  const addSkill = (memberId, expertise) => {
+    const newSkill = {
+      id: Date.now(),
+      employeeId: memberId,
+      expertise,
+      experience: "N/A",
     };
-
-    reader.readAsText(file);
+    setAllSkills((prev) => ({
+      ...prev,
+      [memberId]: [...(prev[memberId] || []), newSkill],
+    }));
+    return newSkill;
   };
 
-  const handleDownload = (format) => {
-    if (!combinedContent) return alert("Nothing to download");
-
-    const blob =
-      format === "json"
-        ? new Blob([combinedContent], { type: "application/json" })
-        : new Blob([yaml.dump(JSON.parse(combinedContent))], {
-            type: "application/x-yaml",
-          });
-
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = updated-data.${format};
-    link.click();
-    URL.revokeObjectURL(url);
+  const updateSkill = (teamId, memberId, skill) => {
+    setMemberSkills((prev) => {
+      const team = prev[teamId] || { checked: true, skills: {} };
+      return {
+        ...prev,
+        [teamId]: {
+          ...team,
+          skills: {
+            ...team.skills,
+            [memberId]: skill,
+          },
+        },
+      };
+    });
   };
-
-  const PreviewBlock = ({ title, content, bg = "#f5f5f5" }) => (
-    <Box sx={{ mt: 4 }}>
-      <Typography variant="h6" color="black">{title}</Typography>
-      <Paper sx={{ mt: 1, p: 2, bgcolor: bg, overflow: "auto", maxHeight: 300 }}>
-        <pre style={{ margin: 0, fontSize: 12 }}>{content}</pre>
-      </Paper>
-    </Box>
-  );
 
   return (
-    <Box sx={{ bgcolor: "white", p: 6, borderRadius: 2, width: "100%" }}>
-      <Grid container justifyContent="space-between" alignItems="center" spacing={2}>
-        <Grid item>
-          <Button
-            component="label"
-            variant="outlined"
-            color="primary"
-            startIcon={<UploadFileIcon />}
-            size="large"
-          >
-            Choose File
-            <input
-              type="file"
-              accept=".json,.yml,.yaml"
-              hidden
-              onChange={handleFileUpload}
-            />
-          </Button>
-        </Grid>
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4, border: 1, borderColor: grey[400], borderRadius: 2 }}>
+      <Typography variant="h3" fontWeight="bold" gutterBottom sx={{ mt: 7, mb: 4, textAlign: "center" }}>
+        Team Skill Assignment
+      </Typography>
 
-        <Grid item>
-          <Button
-            variant="contained"
-            color={showContent ? "warning" : "success"}
-            onClick={() => setShowContent((prev) => !prev)}
-          >
-            {showContent ? "Hide Content" : "Show Content"}
-          </Button>
-        </Grid>
+      {teams?.length ? (
+        <FormGroup>
+          {teams.map((team) => {
+            
 
-        <Grid item>
-          <ButtonGroup variant="outlined">
-            <Button onClick={() => handleDownload("json")}>Download JSON</Button>
-            <Button onClick={() => handleDownload("yml")}>Download YAML</Button>
-          </ButtonGroup>
-        </Grid>
-      </Grid>
+            const members = [
+              { id: team.srcId, name: team.srcName },
+              { id: team.targetId, name: team.targetName },
+            ];
 
-      {fileName && (
-        <Typography variant="body2" color="black" sx={{ mt: 2, textAlign: "center" }}>
-          Uploaded: {fileName}
-        </Typography>
+            return (
+              <Box key={team.teamId} sx={{ py: 3 }}>
+                <Grid container spacing={2} alignItems="center">
+                  <Checkbox
+                    checked={memberSkills?.[team.teamId]?.checked}
+                    onChange={() => toggleCheckbox(team.teamId)}
+                  />
+
+                  {members.map((member) => (
+                    <Grid item key={member.id}>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <Typography variant="h6" sx={{ minWidth: 100, fontWeight: "bold" }}>
+                          {member.name}
+                        </Typography>
+
+                        <Autocomplete
+                          disabled={!memberSkills?.[team.teamId]?.checked}
+                          value={memberSkills?.[team.teamId]?.skills?.[member.id] || null}
+                          options={[
+                            {
+                              disabled: true,
+                              expertise: "Skill",
+                              experience: "Experience",
+                            },
+                            ...(allSkills[member.id] || []),
+                          ]}
+                          filterOptions={(opts, params) => {
+                            const filtered = filter(opts, params);
+                            if (
+                              params.inputValue &&
+                              !opts.some(
+                                (o) =>
+                                  o.expertise?.toLowerCase() === params.inputValue.toLowerCase()
+                              )
+                            ) {
+                              filtered.push({
+                                inputValue: params.inputValue,
+                                expertise: Add "${params.inputValue}",
+                              });
+                            }
+                            return filtered;
+                          }}
+                          getOptionLabel={(option) => option.inputValue || option.expertise || ""}
+                          onChange={(e, val) => {
+                            if (!val || val.disabled) return;
+                            const skill =
+                              typeof val === "string"
+                                ? addSkill(member.id, val)
+                                : val.inputValue
+                                ? addSkill(member.id, val.inputValue)
+                                : val;
+                            updateSkill(team.teamId, member.id, skill);
+                          }}
+                          renderOption={(props, option) => (
+                            <li
+                              {...props}
+                              key={option.id || option.inputValue}
+                              style={{
+                                fontWeight: option.disabled ? "bold" : "normal",
+                                pointerEvents: option.disabled ? "none" : "auto",
+                                display: "flex",
+                                justifyContent: "space-between",
+                                paddingRight: 16,
+                                minWidth: 300,
+                              }}
+                            >
+                              <span>{option.expertise}</span>
+                              <span>{option.experience || ""}</span>
+                            </li>
+                          )}
+                          renderInput={(params) => (
+                            <TextField {...params} label="Select or Add Expertise" sx={{ minWidth: 300 }} />
+                          )}
+                        />
+                      </Box>
+                    </Grid>
+                  ))}
+                </Grid>
+                <Divider sx={{ mt: 4, borderColor: "rgb(178, 176, 239)", borderBottomWidth: 2 }} />
+              </Box>
+            );
+          })}
+        </FormGroup>
+      ) : (
+        <Typography sx={{ textAlign: "center", mt: 2 }}>No team data available.</Typography>
       )}
 
-      {showContent && (
-        <>
-          {rawContent && <PreviewBlock title="Uploaded File Content" content={rawContent} />}
-          {combinedContent && (
-            <PreviewBlock
-              title="Skill Connections"
-              content={combinedContent}
-              bg="#e8f5e9"
-            />
-          )}
-        </>
-      )}
-    </Box>
+      <FileHandler
+        selections={memberSkills}
+        developerNames={teams.reduce((acc, team) => {
+          acc[team.srcId] = team.srcName;
+          acc[team.targetId] = team.targetName;
+          return acc;
+        }, {})}
+        onDataUpload={setUploadedData}
+        uploadedData={uploadedData}
+      />
+    </Container>
   );
 };
 
-export default FileHandler;
+export default TeamMaker;
