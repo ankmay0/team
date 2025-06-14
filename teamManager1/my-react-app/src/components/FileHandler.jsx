@@ -10,9 +10,7 @@ import {
 } from "@mui/material";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 
-//selections will hold the selected skills for each team order {<teamid>: {checkbox : true / false , 101 :<selected skill 1> ,102:<selected skill2>} , <teamid2>: {...}}
 const FileHandler = ({ selections }) => {
-
   const [fileName, setFileName] = useState("");
   const [rawContent, setRawContent] = useState("");
   const [combinedContent, setCombinedContent] = useState("");
@@ -20,55 +18,62 @@ const FileHandler = ({ selections }) => {
   const [uploadedData, setUploadedData] = useState(null);
 
   const generateConnections = () => {
-    const existingMap = {};
+      const existingMap = {};
+          //{    "skills": [
+          //     {
+          //       "name": "Frontend Middle",
+          //       "connectedTo": [
+          //         {
+          //           "name": "agsja",
+          //           "developerId": "101"
+          //         }
+          //       ]
+          //     }
+          //   ]
+          // }
+         
 
-    if (uploadedData && Array.isArray(uploadedData.skills)) {
-      uploadedData.skills.forEach((item) => {
-        existingMap[item.name] = {
-          name: item.name,
-          connectedTo: [...item.connectedTo],
-        };
-      });
-    }
-
-    
-    Object.entries(selections || {}).forEach(([pairingId, pairingData]) => {
-      if (!pairingData || !pairingData.checked || !pairingData.skills) return;
-
-      //pairing id == teamId
-      //pairingData == {checked: true,  <developerId1>:  "skillName" , <developerId2>: "skillName"}
-      // remove expertise can be directly connected to developerId(to be done later) 
-      const devSelections = pairingData.skills;
-      const devIds = Object.keys(devSelections);
-      if (devIds.length !== 2) {
-        console.log("Bad Data:", devIds, devSelections);
-        return;
+      if (uploadedData?.skills?.length) {
+        uploadedData.skills.forEach((item) => {
+          existingMap[item.name] = {
+            name: item.name,
+            connectedTo: [...item.connectedTo],
+          };
+        });
       }
 
-      const [firstDevId, secondDevId] = devIds;
-      const firstSkill = devSelections[firstDevId];
-      const secondSkill = devSelections[secondDevId];
-      if (!firstSkill || !secondSkill) return;
+      //Object.entries(selections || {}).filter(teamData.checked)forEach(([teamId, teamData]) => {
+    Object.entries(selections || {}).forEach(([teamId, teamData]) => {
+      if (!teamData.checked) return;
 
-      if (!existingMap[secondSkill.expertise]) {
-        existingMap[secondSkill.expertise] = {
-          name: secondSkill.expertise,
+      const memberIds = Object.keys(teamData).filter((k) => k !== "checked");
+      if (memberIds.length !== 2) return;
+
+      //TODO : be sured that first is the first and second is the second 
+      const [firstId, secondId] = memberIds;
+      const srcSkill = teamData[firstId];
+      const targetSkill = teamData[secondId];
+      //TODO :before returning line 57  console.log(teamData)
+      if (!srcSkill || !targetSkill) return;
+
+      if (!existingMap[targetSkill]) {
+        existingMap[targetSkill] = {
+          name: targetSkill,
           connectedTo: [],
         };
       }
 
       const connection = {
-        name: firstSkill.expertise,
-        developerId: firstDevId,
+        name: srcSkill,
+        developerId: firstId,
       };
 
-      const exists = existingMap[secondSkill.expertise].connectedTo.find(
-        (c) =>
-          c.name === connection.name && c.developerId === connection.developerId
+      const exists = existingMap[targetSkill].connectedTo.find(
+        (c) => c.name === connection.name && c.developerId === connection.developerId
       );
 
       if (!exists) {
-        existingMap[secondSkill.expertise].connectedTo.push(connection);
+        existingMap[targetSkill].connectedTo.push(connection);
       }
     });
 
@@ -77,9 +82,7 @@ const FileHandler = ({ selections }) => {
   };
 
   const handleShowContent = () => {
-    if (!showContent) {
-      generateConnections();
-    }
+    if (!showContent) generateConnections();
     setShowContent((prev) => !prev);
   };
 
@@ -121,7 +124,7 @@ const FileHandler = ({ selections }) => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = updated-data.${format};
+    link.download = `updated-data.${format}`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -131,9 +134,7 @@ const FileHandler = ({ selections }) => {
       <Typography variant="h6" color="black">
         {title}
       </Typography>
-      <Paper
-        sx={{ mt: 1, p: 2, bgcolor: bg, overflow: "auto", maxHeight: 300 }}
-      >
+      <Paper sx={{ mt: 1, p: 2, bgcolor: bg, overflow: "auto", maxHeight: 300 }}>
         <pre style={{ margin: 0, fontSize: 12 }}>{content}</pre>
       </Paper>
     </Box>
@@ -179,26 +180,16 @@ const FileHandler = ({ selections }) => {
       </Grid>
 
       {fileName && (
-        <Typography
-          variant="body2"
-          color="black"
-          sx={{ mt: 2, textAlign: "center" }}
-        >
+        <Typography variant="body2" color="black" sx={{ mt: 2, textAlign: "center" }}>
           Uploaded: {fileName}
         </Typography>
       )}
 
       {showContent && (
         <>
-          {rawContent && (
-            <PreviewBlock title="Uploaded File Content" content={rawContent} />
-          )}
+          {rawContent && <PreviewBlock title="Uploaded File Content" content={rawContent} />}
           {combinedContent && (
-            <PreviewBlock
-              title="Skill Connections"
-              content={combinedContent}
-              bg="#e8f5e9"
-            />
+            <PreviewBlock title="Skill Connections" content={combinedContent} bg="#e8f5e9" />
           )}
         </>
       )}
