@@ -9,7 +9,6 @@ import {
   Checkbox,
   TextField,
   Divider,
-  Button,
   Paper,
 } from "@mui/material";
 import Autocomplete, { createFilterOptions } from "@mui/material/Autocomplete";
@@ -18,9 +17,7 @@ import { grey } from "@mui/material/colors";
 const filter = createFilterOptions();
 
 const TeamMaker = ({ teams }) => {
-  //memberSkills will hold the selected skills for each team order (checkbox : true / false , 101 :<selected skill 1> ,102:<selected skill2>)
   const [memberSkills, setMemberSkills] = useState({});
-  // allSkills will hold all the skills for each team member with key as memberId
   const [allSkills, setAllSkills] = useState({});
 
   useEffect(() => {
@@ -38,22 +35,22 @@ const TeamMaker = ({ teams }) => {
       });
   }, []);
 
-  const toggleCheckbox = (teamId) => {
+  const toggleCheckbox = (id) => {
     setMemberSkills((prev) => {
-      const existing = prev[teamId] || { checked: false };
+      const existing = prev[id] || { checked: false };
       return {
         ...prev,
-        [teamId]: { ...existing, checked: !existing.checked },
+        [id]: { ...existing, checked: !existing.checked },
       };
     });
   };
 
-  const updateSkill = (teamId, memberId, skill) => {
+  const updateSkill = (id, memberId, skill) => {
     setMemberSkills((prev) => {
-      const team = prev[teamId] || { checked: true };
+      const team = prev[id] || { checked: true };
       return {
         ...prev,
-        [teamId]: {
+        [id]: {
           ...team,
           [memberId]: skill.expertise,
         },
@@ -63,9 +60,9 @@ const TeamMaker = ({ teams }) => {
 
   const addSkill = (memberId, expertise) => {
     const newSkill = {
-      id: Date.now(), // unique ID
+      id: Date.now(),
       expertise,
-      experience: "Beginner", // default value
+      experience: "Beginner",
     };
     setAllSkills((prev) => ({
       ...prev,
@@ -97,21 +94,21 @@ const TeamMaker = ({ teams }) => {
       {teams?.length ? (
         <FormGroup>
           {teams.map((team) => {
+            const uniqueId = `${team.srcId}-${team.targetId}`;
             const members = [
               { id: team.srcId, name: team.srcName },
               { id: team.targetId, name: team.targetName },
             ];
 
             return (
-              <Box key={team.teamId} sx={{ py: 3 }}>
+              <Box key={uniqueId} sx={{ py: 3 }}>
                 <Grid container spacing={2} alignItems="center">
                   <Checkbox
-                    checked={memberSkills?.[team.teamId]?.checked || false}
-                    onChange={() => toggleCheckbox(team.teamId)}
+                    checked={memberSkills?.[uniqueId]?.checked || false}
+                    onChange={() => toggleCheckbox(uniqueId)}
                   />
 
-                  {/* TODO : give space between first dropdown and second label and arrow from src to target */}
-                  {members.map((member , index) => (
+                  {members.map((member, index) => (
                     <Grid item key={member.id}>
                       <Box
                         sx={{ display: "flex", alignItems: "center", gap: 1 }}
@@ -124,9 +121,9 @@ const TeamMaker = ({ teams }) => {
                         </Typography>
 
                         <Autocomplete
-                          disabled={!memberSkills?.[team.teamId]?.checked}
+                          disabled={!memberSkills?.[uniqueId]?.checked}
                           value={
-                            memberSkills?.[team.teamId]?.[member.id] || null
+                            memberSkills?.[uniqueId]?.[member.id] || null
                           }
                           options={[
                             {
@@ -146,7 +143,7 @@ const TeamMaker = ({ teams }) => {
                             if (params.inputValue !== "" && !isExisting) {
                               filtered.push({
                                 inputValue: params.inputValue,
-                                expertise: Add `${params.inputValue}`,
+                                expertise: `Add ${params.inputValue}`,
                                 disabled: false,
                               });
                             }
@@ -167,9 +164,8 @@ const TeamMaker = ({ teams }) => {
                                 : val.inputValue
                                 ? addSkill(member.id, val.inputValue)
                                 : val;
-                            updateSkill(team.teamId, member.id, skill);
+                            updateSkill(uniqueId, member.id, skill);
                           }}
-                          // TODO: higlight the headers of option dropdown
                           renderOption={(props, option) => (
                             <li {...props} key={option.id || option.expertise}>
                               <Box
@@ -178,7 +174,9 @@ const TeamMaker = ({ teams }) => {
                                   justifyContent: "space-between",
                                   width: "100%",
                                   fontSize: 14,
-                                   fontWeight: option.disabled ? "bold" : "normal",
+                                  fontWeight: option.disabled
+                                    ? "bold"
+                                    : "normal",
                                 }}
                               >
                                 <span>{option.expertise}</span>
@@ -225,4 +223,3 @@ const TeamMaker = ({ teams }) => {
 };
 
 export default TeamMaker;
-
