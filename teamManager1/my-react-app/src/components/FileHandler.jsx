@@ -50,10 +50,12 @@ const FileHandler = ({ selections }) => {
       if (memberIds.length !== 2) return;
 
       //TODO : be sured that first is the first and second is the second 
+      // memberIds.sort(); // ✅ ensures consistent order
       const [firstId, secondId] = memberIds;
       const srcSkill = teamData[firstId];
       const targetSkill = teamData[secondId];
       //TODO :before returning line 57  console.log(teamData)
+      // console.log(teamData); // ✅ log before proceeding
       if (!srcSkill || !targetSkill) return;
 
       if (!existingMap[targetSkill]) {
