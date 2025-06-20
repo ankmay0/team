@@ -6,9 +6,9 @@
   { "id": "s4",  "employeeId": "102", "expertise": "Frontend Middle",       "experience": "7 years" },
   { "id": "s5",  "employeeId": "102", "expertise": "UI/UX Specialist",      "experience": "3 years" },
 
-  { "id": "s6",  "employeeId": "201", "expertise": "ML Basics",             "experience": "4 years" },
-  { "id": "s7",  "employeeId": "201", "expertise": "Deep Learning Advance", "experience": "2 years" },
-  { "id": "s8",  "employeeId": "201", "expertise": "FrontEnd Medocare",     "experience": "2 years" },
+  { "id": "s1",  "employeeId": "201", "expertise": "ML Basics",             "experience": "4 years" },
+  { "id": "s2",  "employeeId": "201", "expertise": "Deep Learning Advance", "experience": "2 years" },
+  { "id": "s3",  "employeeId": "201", "expertise": "FrontEnd Medocare",     "experience": "2 years" },
 
   { "id": "s9",  "employeeId": "202", "expertise": "Frontend Middle",       "experience": "7 years" },
   { "id": "s10", "employeeId": "202", "expertise": "UI/UX Specialist",      "experience": "3 years" },
